@@ -12,3 +12,4 @@ def root():
 @app.get("/status")
 def status():
     return {"status": "ok"}
+

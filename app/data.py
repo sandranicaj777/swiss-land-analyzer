@@ -1,4 +1,4 @@
-from .models import Parcel
+from app.models import Parcel
 
 FAKE_PARCELS = [
     Parcel(
