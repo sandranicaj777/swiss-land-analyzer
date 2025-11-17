@@ -20,3 +20,9 @@ def get_parcel(parcel_id: str):
         "estimated_value_chf": 250_000,
     }
     return sample_parcel
+
+#fake data
+@app.get("/status")
+def status():
+    return {"status": "ok"}
+
