@@ -69,6 +69,24 @@ def search_parcels(canton: str | None = None, buildable: bool | None = None):
         results = [p for p in results if p.is_buildable == buildable]
     return results
 
+@router.get("/parcels/stats")
+def get_parcels_stats():
+    """Returns aggregated statistics about all parcels."""
+    total_parcels = len(FAKE_PARCELS)
+    if total_parcels == 0:
+        return {"total_parcels": 0, "buildable_percentage": "0.00%", "average_area_m2": "0.00"}
+        
+    buildable_count = sum(1 for p in FAKE_PARCELS if p.is_buildable)
+    average_area = sum(p.area_m2 for p in FAKE_PARCELS) / total_parcels 
+    
+    return {
+        "total_parcels": total_parcels,
+        "buildable_percentage": f"{(buildable_count / total_parcels) * 100:.2f}%",
+        "average_area_m2": f"{average_area:.2f}"
+    }
+
+
+
 
 @router.get("/parcels/{parcel_id}", response_model=Parcel)
 def get_parcel(parcel_id: str):
@@ -76,4 +94,50 @@ def get_parcel(parcel_id: str):
         if parcel.id == parcel_id:
             return parcel
     raise HTTPException(status_code=404, detail="Parcel not found")
+
+
+@router.get("/parcels/{parcel_id}/score")
+def get_parcel_score(parcel_id: str):
+    """Calculates and returns a mock development score for a parcel."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+    
+    parcel = FAKE_PARCELS[index]
+    score = 75
+    if parcel.is_buildable:
+        score += 15
+    if parcel.area_m2 > 1000:
+        score += 10
+        
+    return {"parcel_id": parcel_id, "score": score, "explanation": "Score is based on buildability and area size."}
+
+@router.get("/parcels/{parcel_id}/summary")
+def get_parcel_summary(parcel_id: str):
+    """Returns a brief, generated summary of a parcel."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    return {
+        "parcel_id": parcel_id, 
+        "summary": f"This parcel is located in the canton of **{parcel.canton}** and has an area of **{parcel.area_m2} m²**. Its current zoning is **{parcel.zoning}**."
+    }
+
+@router.get("/parcels/{parcel_id}/recommendations")
+def get_parcel_recommendations(parcel_id: str):
+    """Provides mock recommendations based on parcel attributes."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    recommendations = []
+    if parcel.is_buildable:
+        recommendations.append("Recommended for single-family home development.")
+    else:
+        recommendations.append("Recommended for agricultural use or zoning change application.")
+        
+    return {"parcel_id": parcel_id, "recommendations": recommendations}
 
