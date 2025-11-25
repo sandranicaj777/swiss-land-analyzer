@@ -2,6 +2,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware 
 from app.routers import parcels
+from app.database import create_db_tables, engine 
+from app.models import Base 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -9,9 +11,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SwissLandAnalyzer")
 
+create_db_tables()
+
 app = FastAPI(
     title="Swiss Land Analyzer API",
-    description="Backend API for Swiss Land Parcel Analysis (Mock Data)",
+    description="Backend API for Swiss Land Parcel Analysis (Database Version)",
     version="1.0.0",
 )
 
@@ -36,7 +40,7 @@ app.include_router(parcels.router, tags=["Parcels"])
 def root():
     """Simple root endpoint to confirm the API is running."""
     logger.info("Root endpoint accessed.")
-    return {"message": "SwissParcel backend is running (v1.0.0)"}
+    return {"message": "SwissParcel backend is running (v1.0.0, Database enabled)"}
 
 @app.get("/status")
 def status():

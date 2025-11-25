@@ -2,8 +2,10 @@ import logging
 from fastapi import APIRouter, HTTPException, Body, Depends, Security
 from fastapi.security import APIKeyHeader
 from typing import List
+from sqlalchemy.orm import Session 
 from app.models import Parcel, ParcelCreate 
-from app.data import FAKE_PARCELS
+from app.database import get_db
+import app.crud as crud
 
 logger = logging.getLogger("SwissLandAnalyzer.Parcels")
 
@@ -21,24 +23,20 @@ def get_api_key(api_key: str = Security(api_key_header)):
             status_code=403, detail="Not authorized. Invalid or missing API Key in X-API-Key header."
         )
 
-def find_parcel_index(parcel_id: str) -> int:
-    for i, parcel in enumerate(FAKE_PARCELS):
-        if parcel.id == parcel_id:
-            return i
-    return -1
 
 @router.post("/parcels", response_model=Parcel, status_code=201)
 def create_parcel(
     parcel: ParcelCreate,
-    security: str = Depends(get_api_key)
+    security: str = Depends(get_api_key),
+    db: Session = Depends(get_db) 
 ):
-    if find_parcel_index(parcel.id) != -1:
+
+    if crud.get_parcel_by_id(db, parcel_id=parcel.id): 
         logger.warning(f"Attempted POST with existing ID: {parcel.id}")
         raise HTTPException(status_code=400, detail=f"Parcel ID '{parcel.id}' already exists")
     
-    new_parcel = Parcel(**parcel.model_dump())
-    
-    FAKE_PARCELS.append(new_parcel)
+
+    new_parcel = crud.create_parcel(db, parcel=parcel)
     
     logger.info(f"Parcel created successfully: ID={new_parcel.id}")
     return new_parcel
@@ -47,18 +45,15 @@ def create_parcel(
 def update_parcel(
     parcel_id: str,
     updated_parcel_data: ParcelCreate = Body(...),
-    security: str = Depends(get_api_key)
+    security: str = Depends(get_api_key),
+    db: Session = Depends(get_db) 
 ):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
+  
+    updated_parcel = crud.update_parcel(db, parcel_id, updated_parcel_data)
+    
+    if updated_parcel is None:
         logger.warning(f"Update attempt failed: Parcel ID {parcel_id} not found.")
         raise HTTPException(status_code=404, detail="Parcel not found")
-
-    update_data = updated_parcel_data.dict(exclude={'id'}) 
-    
-    updated_parcel = Parcel(id=parcel_id, **update_data) 
-    
-    FAKE_PARCELS[index] = updated_parcel
     
     logger.info(f"Parcel updated successfully: ID={parcel_id}")
     return updated_parcel
@@ -66,66 +61,61 @@ def update_parcel(
 @router.delete("/parcels/{parcel_id}", status_code=204)
 def delete_parcel(
     parcel_id: str,
-    security: str = Depends(get_api_key)
+    security: str = Depends(get_api_key),
+    db: Session = Depends(get_db) 
 ):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
+    if not crud.delete_parcel(db, parcel_id):
         logger.warning(f"Delete attempt failed: Parcel ID {parcel_id} not found.")
         raise HTTPException(status_code=404, detail="Parcel not found")
-    
-    del FAKE_PARCELS[index]
     
     logger.info(f"Parcel deleted successfully: ID={parcel_id}")
     return
 
 @router.get("/parcels", response_model=List[Parcel])
-def list_parcels(skip: int = 0, limit: int = 10): 
+def list_parcels(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)): 
     logger.debug(f"Fetching parcels with skip={skip}, limit={limit}")
-    return FAKE_PARCELS[skip : skip + limit] 
+    return crud.get_parcels(db, skip=skip, limit=limit) 
 
 @router.get("/parcels/search", response_model=List[Parcel])
-def search_parcels(canton: str | None = None, buildable: bool | None = None):
-    results = FAKE_PARCELS
-    if canton:
-        results = [p for p in results if p.canton.lower() == canton.lower()]
-    if buildable is not None:
-        results = [p for p in results if p.is_buildable == buildable]
+def search_parcels(
+    canton: str | None = None, 
+    buildable: bool | None = None,
+    db: Session = Depends(get_db) # New
+):
+    # Use CRUD function to search parcels
+    results = crud.search_parcels(db, canton=canton, buildable=buildable)
     logger.debug(f"Search executed: canton={canton}, buildable={buildable}. Found {len(results)} results.")
     return results
 
 @router.get("/parcels/stats")
-def get_parcels_stats():
-    total_parcels = len(FAKE_PARCELS)
-    if total_parcels == 0:
-        logger.info("Stats requested, but parcel list is empty.")
-        return {"total_parcels": 0, "buildable_percentage": "0.00%", "average_area_m2": "0.00"}
-        
-    buildable_count = sum(1 for p in FAKE_PARCELS if p.is_buildable)
-    average_area = sum(p.area_m2 for p in FAKE_PARCELS) / total_parcels 
-    
+def get_parcels_stats(db: Session = Depends(get_db)): # New
+    # Use CRUD function to get stats
+    stats = crud.get_parcels_stats(db)
     logger.info("Parcel stats calculated and returned.")
-    return {
-        "total_parcels": total_parcels,
-        "buildable_percentage": f"{(buildable_count / total_parcels) * 100:.2f}%",
-        "average_area_m2": f"{average_area:.2f}"
-    }
+    return stats
 
 @router.get("/parcels/{parcel_id}", response_model=Parcel)
-def get_parcel(parcel_id: str):
-    for parcel in FAKE_PARCELS:
-        if parcel.id == parcel_id:
-            logger.debug(f"Parcel retrieval successful: ID={parcel_id}")
-            return parcel
-    logger.warning(f"Parcel retrieval failed: ID={parcel_id} not found.")
-    raise HTTPException(status_code=404, detail="Parcel not found")
-
-@router.get("/parcels/{parcel_id}/score")
-def get_parcel_score(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
+def get_parcel(parcel_id: str, db: Session = Depends(get_db)): 
+    parcel = crud.get_parcel_by_id(db, parcel_id=parcel_id)
+    if parcel is None:
+        logger.warning(f"Parcel retrieval failed: ID={parcel_id} not found.")
         raise HTTPException(status_code=404, detail="Parcel not found")
     
-    parcel = FAKE_PARCELS[index]
+    logger.debug(f"Parcel retrieval successful: ID={parcel_id}")
+    return parcel
+
+def get_parcel_or_404(parcel_id: str, db: Session = Depends(get_db)):
+    """Helper dependency to fetch a parcel or raise 404."""
+    parcel = crud.get_parcel_by_id(db, parcel_id=parcel_id)
+    if parcel is None:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+    return parcel
+
+@router.get("/parcels/{parcel_id}/score")
+def get_parcel_score(
+    parcel_id: str, 
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     score = 75
     if parcel.is_buildable:
         score += 15
@@ -136,12 +126,10 @@ def get_parcel_score(parcel_id: str):
     return {"parcel_id": parcel_id, "score": score, "explanation": "Score is based on buildability and area size."}
 
 @router.get("/parcels/{parcel_id}/summary")
-def get_parcel_summary(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
+def get_parcel_summary(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     logger.debug(f"Summary requested for ID={parcel_id}")
     return {
         "parcel_id": parcel_id, 
@@ -149,12 +137,10 @@ def get_parcel_summary(parcel_id: str):
     }
 
 @router.get("/parcels/{parcel_id}/recommendations")
-def get_parcel_recommendations(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
+def get_parcel_recommendations(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     recommendations = []
     if parcel.is_buildable:
         recommendations.append("Recommended for single-family home development.")
@@ -165,12 +151,10 @@ def get_parcel_recommendations(parcel_id: str):
     return {"parcel_id": parcel_id, "recommendations": recommendations}
 
 @router.get("/parcels/{parcel_id}/zoning-explanation")
-def get_zoning_explanation(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
+def get_zoning_explanation(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     if parcel.zoning == "buildable":
         explanation = "The parcel is designated as **Residential Zone 2 (R2)**, allowing for immediate single-family or duplex development with a maximum floor area ratio (FAR) of 0.4 and a maximum building height of 11 meters."
     elif parcel.zoning == "agricultural":
@@ -182,13 +166,10 @@ def get_zoning_explanation(parcel_id: str):
     return {"parcel_id": parcel_id, "zoning_explanation": explanation}
 
 @router.get("/parcels/{parcel_id}/value-estimate")
-def get_value_estimate(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
-    
+def get_value_estimate(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     base_value = parcel.area_m2 * 200
     if parcel.is_buildable:
         estimated_value = base_value + (parcel.area_m2 * 800) 
@@ -201,12 +182,10 @@ def get_value_estimate(parcel_id: str):
     return {"parcel_id": parcel_id, "estimated_value_chf": estimated_value, "method": method}
 
 @router.get("/parcels/{parcel_id}/development-potential")
-def get_development_potential(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
+def get_development_potential(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     potential = "Low"
     recommendation = "No viable development due to zoning."
     
@@ -221,12 +200,10 @@ def get_development_potential(parcel_id: str):
     return {"parcel_id": parcel_id, "development_potential": potential, "highest_best_use": recommendation}
 
 @router.get("/parcels/{parcel_id}/restrictions")
-def get_restrictions(parcel_id: str):
-    index = find_parcel_index(parcel_id)
-    if index == -1:
-        raise HTTPException(status_code=404, detail="Parcel not found")
-        
-    parcel = FAKE_PARCELS[index]
+def get_restrictions(
+    parcel_id: str,
+    parcel: Parcel = Depends(get_parcel_or_404) 
+):
     restrictions = ["No build-over zone for power lines within 5 meters of the northern border.", "Maximum roof pitch of 35 degrees."]
     
     if not parcel.is_buildable:
