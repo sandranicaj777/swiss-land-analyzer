@@ -12,7 +12,7 @@ FAKE_PARCELS = [
     ),
     Parcel(
         id="67890",
-        canton="FR",
+        canton="DE",
         municipality="Sampletown",
         area_m2=800,
         zoning="agricultural",
