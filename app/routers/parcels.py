@@ -141,3 +141,74 @@ def get_parcel_recommendations(parcel_id: str):
         
     return {"parcel_id": parcel_id, "recommendations": recommendations}
 
+@router.get("/parcels/{parcel_id}/zoning-explanation")
+def get_zoning_explanation(parcel_id: str):
+    """Provides a detailed, simulated explanation of the parcel's zoning regulations."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    if parcel.zoning == "buildable":
+        explanation = "The parcel is designated as **Residential Zone 2 (R2)**, allowing for immediate single-family or duplex development with a maximum floor area ratio (FAR) of 0.4 and a maximum building height of 11 meters."
+    elif parcel.zoning == "agricultural":
+        explanation = "The parcel is designated as **Agricultural Protection Zone**. Development is severely restricted, primarily limited to farming structures or facilities essential for agricultural operations. Residential use is generally prohibited."
+    else:
+        explanation = f"The parcel is currently designated as **{parcel.zoning}**. Consult local cantonal planning authority for exact restrictions."
+        
+    return {"parcel_id": parcel_id, "zoning_explanation": explanation}
+
+@router.get("/parcels/{parcel_id}/value-estimate")
+def get_value_estimate(parcel_id: str):
+    """Provides a simulated, complex AI valuation of the parcel."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    
+    base_value = parcel.area_m2 * 200
+    if parcel.is_buildable:
+        estimated_value = base_value + (parcel.area_m2 * 800) 
+        method = "AI model calculated valuation based on comparable buildable plots, proximity to transport, and current zoning."
+    else:
+        estimated_value = base_value * 0.25
+        method = "Valuation adjusted for non-buildable status, reflecting only residual land value."
+
+    return {"parcel_id": parcel_id, "estimated_value_chf": estimated_value, "method": method}
+
+@router.get("/parcels/{parcel_id}/development-potential")
+def get_development_potential(parcel_id: str):
+    """Assesses the simulated highest and best use potential."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    potential = "Low"
+    recommendation = "No viable development due to zoning."
+    
+    if parcel.is_buildable and parcel.area_m2 > 1000:
+        potential = "High"
+        recommendation = "Suitable for multi-unit (3-4 story) residential project or small commercial space."
+    elif parcel.is_buildable:
+        potential = "Moderate"
+        recommendation = "Suitable for a single-family home or duplex development."
+        
+    return {"parcel_id": parcel_id, "development_potential": potential, "highest_best_use": recommendation}
+
+@router.get("/parcels/{parcel_id}/restrictions")
+def get_restrictions(parcel_id: str):
+    """Lists simulated major legal and physical development restrictions."""
+    index = find_parcel_index(parcel_id)
+    if index == -1:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+        
+    parcel = FAKE_PARCELS[index]
+    restrictions = ["No build-over zone for power lines within 5 meters of the northern border.", "Maximum roof pitch of 35 degrees."]
+    
+    if not parcel.is_buildable:
+        restrictions.append(f"Development is strictly prohibited due to **{parcel.zoning}** zoning. Only agricultural use is permitted.")
+        
+    return {"parcel_id": parcel_id, "major_restrictions": restrictions}
+
