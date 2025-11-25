@@ -1,20 +1,39 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
+from sqlalchemy import Column, String, Float, Boolean, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped
+from app.database import Base 
 
-class Parcel(BaseModel):
-    id: str = Field(..., description="Unique ID of the parcel, e.g., '12345'")
-    canton: str
-    municipality: str
-    area_m2: float = Field(..., gt=0, description="Area in square meters.")
-    zoning: str
-    is_buildable: bool
-    estimated_value_chf: Optional[float] = None
-
+class ParcelORM(Base):
+    """
+    Represents the 'parcels' table in the database.
+    """
+    __tablename__ = "parcels"
+    
+    id: Mapped[str] = Column(String, primary_key=True, index=True)
+    
+    canton: Mapped[str] = Column(String, index=True, nullable=False)
+    area_m2: Mapped[float] = Column(Float, nullable=False)
+    zoning: Mapped[str] = Column(String, nullable=False)
+    is_buildable: Mapped[bool] = Column(Boolean, nullable=False)
+    
 class ParcelCreate(BaseModel):
-    id: str = Field(..., description="Unique ID for the new parcel.")
+    id: str
     canton: str
-    municipality: str
-    area_m2: float = Field(..., gt=0)
+    area_m2: float
     zoning: str
     is_buildable: bool
-    estimated_value_chf: Optional[float] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "2222-A",
+                "canton": "ZH",
+                "area_m2": 500.5,
+                "zoning": "buildable",
+                "is_buildable": True
+            }
+        }
+
+class Parcel(ParcelCreate):
+    class Config:
+        from_attributes = True 
