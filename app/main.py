@@ -1,15 +1,36 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware 
 from app.routers import parcels
 
-app = FastAPI()
+app = FastAPI(
+    title="Swiss Land Analyzer API",
+    description="Backend API for Swiss Land Parcel Analysis (Mock Data)",
+    version="1.0.0",
+)
 
-app.include_router(parcels.router)
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:8080", 
+    "http://127.0.0.1:8000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,              
+    allow_credentials=True,             
+    allow_methods=["*"],                
+    allow_headers=["*"],                
+)
+
+app.include_router(parcels.router, tags=["Parcels"])
 
 @app.get("/")
 def root():
-    return {"message": "SwissParcel backend is running"}
+    """Simple root endpoint to confirm the API is running."""
+    return {"message": "SwissParcel backend is running (v1.0.0)"}
 
 @app.get("/status")
 def status():
+    """Simple status check endpoint."""
     return {"status": "ok"}
-

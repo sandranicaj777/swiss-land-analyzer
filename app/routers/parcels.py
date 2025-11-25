@@ -57,8 +57,14 @@ def delete_parcel(parcel_id: str):
     return
 
 @router.get("/parcels", response_model=List[Parcel])
-def list_parcels():
-    return FAKE_PARCELS
+def list_parcels(skip: int = 0, limit: int = 10): 
+    """
+    Lists all parcels with optional pagination.
+    
+    :param skip: The number of items to skip (offset). Defaults to 0.
+    :param limit: The maximum number of items to return (page size). Defaults to 10.
+    """
+    return FAKE_PARCELS[skip : skip + limit] 
 
 @router.get("/parcels/search", response_model=List[Parcel])
 def search_parcels(canton: str | None = None, buildable: bool | None = None):
