@@ -1,22 +1,33 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends, Security
+from fastapi.security import APIKeyHeader
 from typing import List
 from app.models import Parcel, ParcelCreate 
 from app.data import FAKE_PARCELS
 
 router = APIRouter()
 
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+SECRET_API_KEY = "SUPER_SECRET_TOKEN" 
+
+def get_api_key(api_key: str = Security(api_key_header)):
+    if api_key == SECRET_API_KEY:
+        return api_key
+    else:
+        raise HTTPException(
+            status_code=403, detail="Not authorized. Invalid or missing API Key in X-API-Key header."
+        )
+
 def find_parcel_index(parcel_id: str) -> int:
-    """Finds the index of a parcel in FAKE_PARCELS by its ID."""
     for i, parcel in enumerate(FAKE_PARCELS):
         if parcel.id == parcel_id:
             return i
     return -1
 
 @router.post("/parcels", response_model=Parcel, status_code=201)
-def create_parcel(parcel: ParcelCreate):
-    """
-    Creates a new parcel.
-    """
+def create_parcel(
+    parcel: ParcelCreate,
+    security: str = Depends(get_api_key)
+):
     if find_parcel_index(parcel.id) != -1:
         raise HTTPException(status_code=400, detail=f"Parcel ID '{parcel.id}' already exists")
     
@@ -27,10 +38,11 @@ def create_parcel(parcel: ParcelCreate):
     return new_parcel
 
 @router.put("/parcels/{parcel_id}", response_model=Parcel)
-def update_parcel(parcel_id: str, updated_parcel_data: ParcelCreate = Body(...)):
-    """
-    Updates an existing parcel by ID.
-    """
+def update_parcel(
+    parcel_id: str,
+    updated_parcel_data: ParcelCreate = Body(...),
+    security: str = Depends(get_api_key)
+):
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -44,10 +56,10 @@ def update_parcel(parcel_id: str, updated_parcel_data: ParcelCreate = Body(...))
     return updated_parcel
 
 @router.delete("/parcels/{parcel_id}", status_code=204)
-def delete_parcel(parcel_id: str):
-    """
-    Deletes a parcel by ID.
-    """
+def delete_parcel(
+    parcel_id: str,
+    security: str = Depends(get_api_key)
+):
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -58,12 +70,6 @@ def delete_parcel(parcel_id: str):
 
 @router.get("/parcels", response_model=List[Parcel])
 def list_parcels(skip: int = 0, limit: int = 10): 
-    """
-    Lists all parcels with optional pagination.
-    
-    :param skip: The number of items to skip (offset). Defaults to 0.
-    :param limit: The maximum number of items to return (page size). Defaults to 10.
-    """
     return FAKE_PARCELS[skip : skip + limit] 
 
 @router.get("/parcels/search", response_model=List[Parcel])
@@ -77,7 +83,6 @@ def search_parcels(canton: str | None = None, buildable: bool | None = None):
 
 @router.get("/parcels/stats")
 def get_parcels_stats():
-    """Returns aggregated statistics about all parcels."""
     total_parcels = len(FAKE_PARCELS)
     if total_parcels == 0:
         return {"total_parcels": 0, "buildable_percentage": "0.00%", "average_area_m2": "0.00"}
@@ -91,9 +96,6 @@ def get_parcels_stats():
         "average_area_m2": f"{average_area:.2f}"
     }
 
-
-
-
 @router.get("/parcels/{parcel_id}", response_model=Parcel)
 def get_parcel(parcel_id: str):
     for parcel in FAKE_PARCELS:
@@ -101,10 +103,8 @@ def get_parcel(parcel_id: str):
             return parcel
     raise HTTPException(status_code=404, detail="Parcel not found")
 
-
 @router.get("/parcels/{parcel_id}/score")
 def get_parcel_score(parcel_id: str):
-    """Calculates and returns a mock development score for a parcel."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -120,7 +120,6 @@ def get_parcel_score(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/summary")
 def get_parcel_summary(parcel_id: str):
-    """Returns a brief, generated summary of a parcel."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -133,7 +132,6 @@ def get_parcel_summary(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/recommendations")
 def get_parcel_recommendations(parcel_id: str):
-    """Provides mock recommendations based on parcel attributes."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -149,7 +147,6 @@ def get_parcel_recommendations(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/zoning-explanation")
 def get_zoning_explanation(parcel_id: str):
-    """Provides a detailed, simulated explanation of the parcel's zoning regulations."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -166,7 +163,6 @@ def get_zoning_explanation(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/value-estimate")
 def get_value_estimate(parcel_id: str):
-    """Provides a simulated, complex AI valuation of the parcel."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -185,7 +181,6 @@ def get_value_estimate(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/development-potential")
 def get_development_potential(parcel_id: str):
-    """Assesses the simulated highest and best use potential."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -205,7 +200,6 @@ def get_development_potential(parcel_id: str):
 
 @router.get("/parcels/{parcel_id}/restrictions")
 def get_restrictions(parcel_id: str):
-    """Lists simulated major legal and physical development restrictions."""
     index = find_parcel_index(parcel_id)
     if index == -1:
         raise HTTPException(status_code=404, detail="Parcel not found")
@@ -217,4 +211,3 @@ def get_restrictions(parcel_id: str):
         restrictions.append(f"Development is strictly prohibited due to **{parcel.zoning}** zoning. Only agricultural use is permitted.")
         
     return {"parcel_id": parcel_id, "major_restrictions": restrictions}
-
