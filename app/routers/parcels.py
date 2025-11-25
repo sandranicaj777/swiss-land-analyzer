@@ -1,18 +1,22 @@
+import logging
 from fastapi import APIRouter, HTTPException, Body, Depends, Security
 from fastapi.security import APIKeyHeader
 from typing import List
 from app.models import Parcel, ParcelCreate 
 from app.data import FAKE_PARCELS
 
+logger = logging.getLogger("SwissLandAnalyzer.Parcels")
+
 router = APIRouter()
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-SECRET_API_KEY = "SUPER_SECRET_TOKEN" 
+SECRET_API_KEY = "SUPER_ALEX" 
 
 def get_api_key(api_key: str = Security(api_key_header)):
     if api_key == SECRET_API_KEY:
         return api_key
     else:
+        logger.warning("Authentication failed: Invalid or missing API Key.")
         raise HTTPException(
             status_code=403, detail="Not authorized. Invalid or missing API Key in X-API-Key header."
         )
@@ -29,12 +33,14 @@ def create_parcel(
     security: str = Depends(get_api_key)
 ):
     if find_parcel_index(parcel.id) != -1:
+        logger.warning(f"Attempted POST with existing ID: {parcel.id}")
         raise HTTPException(status_code=400, detail=f"Parcel ID '{parcel.id}' already exists")
     
     new_parcel = Parcel(**parcel.model_dump())
     
     FAKE_PARCELS.append(new_parcel)
     
+    logger.info(f"Parcel created successfully: ID={new_parcel.id}")
     return new_parcel
 
 @router.put("/parcels/{parcel_id}", response_model=Parcel)
@@ -45,6 +51,7 @@ def update_parcel(
 ):
     index = find_parcel_index(parcel_id)
     if index == -1:
+        logger.warning(f"Update attempt failed: Parcel ID {parcel_id} not found.")
         raise HTTPException(status_code=404, detail="Parcel not found")
 
     update_data = updated_parcel_data.dict(exclude={'id'}) 
@@ -53,6 +60,7 @@ def update_parcel(
     
     FAKE_PARCELS[index] = updated_parcel
     
+    logger.info(f"Parcel updated successfully: ID={parcel_id}")
     return updated_parcel
 
 @router.delete("/parcels/{parcel_id}", status_code=204)
@@ -62,14 +70,17 @@ def delete_parcel(
 ):
     index = find_parcel_index(parcel_id)
     if index == -1:
+        logger.warning(f"Delete attempt failed: Parcel ID {parcel_id} not found.")
         raise HTTPException(status_code=404, detail="Parcel not found")
     
     del FAKE_PARCELS[index]
     
+    logger.info(f"Parcel deleted successfully: ID={parcel_id}")
     return
 
 @router.get("/parcels", response_model=List[Parcel])
 def list_parcels(skip: int = 0, limit: int = 10): 
+    logger.debug(f"Fetching parcels with skip={skip}, limit={limit}")
     return FAKE_PARCELS[skip : skip + limit] 
 
 @router.get("/parcels/search", response_model=List[Parcel])
@@ -79,17 +90,20 @@ def search_parcels(canton: str | None = None, buildable: bool | None = None):
         results = [p for p in results if p.canton.lower() == canton.lower()]
     if buildable is not None:
         results = [p for p in results if p.is_buildable == buildable]
+    logger.debug(f"Search executed: canton={canton}, buildable={buildable}. Found {len(results)} results.")
     return results
 
 @router.get("/parcels/stats")
 def get_parcels_stats():
     total_parcels = len(FAKE_PARCELS)
     if total_parcels == 0:
+        logger.info("Stats requested, but parcel list is empty.")
         return {"total_parcels": 0, "buildable_percentage": "0.00%", "average_area_m2": "0.00"}
         
     buildable_count = sum(1 for p in FAKE_PARCELS if p.is_buildable)
     average_area = sum(p.area_m2 for p in FAKE_PARCELS) / total_parcels 
     
+    logger.info("Parcel stats calculated and returned.")
     return {
         "total_parcels": total_parcels,
         "buildable_percentage": f"{(buildable_count / total_parcels) * 100:.2f}%",
@@ -100,7 +114,9 @@ def get_parcels_stats():
 def get_parcel(parcel_id: str):
     for parcel in FAKE_PARCELS:
         if parcel.id == parcel_id:
+            logger.debug(f"Parcel retrieval successful: ID={parcel_id}")
             return parcel
+    logger.warning(f"Parcel retrieval failed: ID={parcel_id} not found.")
     raise HTTPException(status_code=404, detail="Parcel not found")
 
 @router.get("/parcels/{parcel_id}/score")
@@ -116,6 +132,7 @@ def get_parcel_score(parcel_id: str):
     if parcel.area_m2 > 1000:
         score += 10
         
+    logger.info(f"Score calculated for ID={parcel_id}: Score={score}")
     return {"parcel_id": parcel_id, "score": score, "explanation": "Score is based on buildability and area size."}
 
 @router.get("/parcels/{parcel_id}/summary")
@@ -125,6 +142,7 @@ def get_parcel_summary(parcel_id: str):
         raise HTTPException(status_code=404, detail="Parcel not found")
         
     parcel = FAKE_PARCELS[index]
+    logger.debug(f"Summary requested for ID={parcel_id}")
     return {
         "parcel_id": parcel_id, 
         "summary": f"This parcel is located in the canton of **{parcel.canton}** and has an area of **{parcel.area_m2} m²**. Its current zoning is **{parcel.zoning}**."
@@ -143,6 +161,7 @@ def get_parcel_recommendations(parcel_id: str):
     else:
         recommendations.append("Recommended for agricultural use or zoning change application.")
         
+    logger.info(f"Recommendations provided for ID={parcel_id}")
     return {"parcel_id": parcel_id, "recommendations": recommendations}
 
 @router.get("/parcels/{parcel_id}/zoning-explanation")
@@ -159,6 +178,7 @@ def get_zoning_explanation(parcel_id: str):
     else:
         explanation = f"The parcel is currently designated as **{parcel.zoning}**. Consult local cantonal planning authority for exact restrictions."
         
+    logger.debug(f"Zoning explanation generated for ID={parcel_id}")
     return {"parcel_id": parcel_id, "zoning_explanation": explanation}
 
 @router.get("/parcels/{parcel_id}/value-estimate")
@@ -177,6 +197,7 @@ def get_value_estimate(parcel_id: str):
         estimated_value = base_value * 0.25
         method = "Valuation adjusted for non-buildable status, reflecting only residual land value."
 
+    logger.info(f"Value estimate completed for ID={parcel_id}. Value={estimated_value:.2f} CHF")
     return {"parcel_id": parcel_id, "estimated_value_chf": estimated_value, "method": method}
 
 @router.get("/parcels/{parcel_id}/development-potential")
@@ -196,6 +217,7 @@ def get_development_potential(parcel_id: str):
         potential = "Moderate"
         recommendation = "Suitable for a single-family home or duplex development."
         
+    logger.info(f"Development potential assessed for ID={parcel_id}: Potential={potential}")
     return {"parcel_id": parcel_id, "development_potential": potential, "highest_best_use": recommendation}
 
 @router.get("/parcels/{parcel_id}/restrictions")
@@ -210,4 +232,5 @@ def get_restrictions(parcel_id: str):
     if not parcel.is_buildable:
         restrictions.append(f"Development is strictly prohibited due to **{parcel.zoning}** zoning. Only agricultural use is permitted.")
         
+    logger.debug(f"Restrictions fetched for ID={parcel_id}")
     return {"parcel_id": parcel_id, "major_restrictions": restrictions}
