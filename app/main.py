@@ -2,7 +2,6 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware 
 from app.routers import parcels
-from app.database import create_db_tables, engine 
 from app.models import Base 
 
 logging.basicConfig(
@@ -11,7 +10,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SwissLandAnalyzer")
 
-create_db_tables()
 
 app = FastAPI(
     title="Swiss Land Analyzer API",

@@ -1,49 +1,171 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import api from "../services.js"
+import api from "../services";
+import ParcelMap from "../components/ParcelMap";
 
+/* Small reusable card wrapper */
+function Card({ title, children }) {
+  return (
+    <div className="bg-white rounded-xl shadow p-5 space-y-2">
+      {title && <h2 className="text-lg font-semibold">{title}</h2>}
+      {children}
+    </div>
+  );
+}
 
 export default function ParcelDetail() {
   const { id } = useParams();
+
   const [parcel, setParcel] = useState(null);
-  const [score, setScore] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [score, setScore] = useState(null);
   const [value, setValue] = useState(null);
   const [potential, setPotential] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
+  const [restrictions, setRestrictions] = useState(null);
+  const [zoningExplanation, setZoningExplanation] = useState(null);
 
   useEffect(() => {
     api.get(`/parcels/${id}`).then(res => setParcel(res.data));
-    api.get(`/parcels/${id}/score`).then(res => setScore(res.data));
     api.get(`/parcels/${id}/summary`).then(res => setSummary(res.data));
+    api.get(`/parcels/${id}/score`).then(res => setScore(res.data));
     api.get(`/parcels/${id}/value-estimate`).then(res => setValue(res.data));
     api.get(`/parcels/${id}/development-potential`).then(res => setPotential(res.data));
+    api.get(`/parcels/${id}/recommendations`).then(res => setRecommendations(res.data));
+    api.get(`/parcels/${id}/restrictions`).then(res => setRestrictions(res.data));
+    api.get(`/parcels/${id}/zoning-explanation`).then(res => setZoningExplanation(res.data));
   }, [id]);
 
-  if (!parcel) return <div>Loading...</div>;
+  if (!parcel) return <div className="p-6">Loading parcel…</div>;
+
+  const geojson = parcel.geometry
+    ? {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: parcel.geometry,
+            properties: {
+              id: parcel.id,
+              is_buildable: parcel.is_buildable,
+              zoning: parcel.zoning,
+            },
+          },
+        ],
+      }
+    : null;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-bold">
-        Parcel {parcel.id}
-      </h1>
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <h1 className="text-3xl font-bold">Parcel {parcel.id}</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="border p-4 rounded">
+      {/* MAP */}
+      {geojson && (
+        <div className="rounded-xl overflow-hidden shadow">
+          <ParcelMap geojson={geojson} height="320px" showLegend={false} />
+        </div>
+      )}
+
+      {/* GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card title="Overview">
           <p><strong>Canton:</strong> {parcel.canton}</p>
-          <p><strong>Area:</strong> {parcel.area_m2} m²</p>
+          <p><strong>Area:</strong> {Math.round(parcel.area_m2)} m²</p>
           <p><strong>Zoning:</strong> {parcel.zoning}</p>
-          <p><strong>Buildable:</strong> {parcel.is_buildable ? "Yes" : "No"}</p>
-        </div>
+          <p>
+            <strong>Status:</strong>{" "}
+            <span className={parcel.is_buildable ? "text-green-600" : "text-gray-500"}>
+              {parcel.is_buildable ? "Buildable" : "Not buildable"}
+            </span>
+          </p>
+        </Card>
 
-        <div className="border p-4 bg-red-50 rounded">
-          <h2 className="font-bold mb-2">AI Insights</h2>
+        <Card title="Value & Potential">
+          {value && (
+            <>
+              <p className="text-2xl font-bold">
+                {Math.round(value.estimated_value_chf).toLocaleString()} CHF
+              </p>
+              <p className="text-sm text-gray-600">{value.method}</p>
+            </>
+          )}
 
-          {score && <p>Score: <strong>{score.score}</strong></p>}
-          {summary && <p dangerouslySetInnerHTML={{ __html: summary.summary }} />}
-          {value && <p>Estimated Value: <strong>{value.estimated_value_chf} CHF</strong></p>}
-          {potential && <p>Potential: <strong>{potential.development_potential}</strong></p>}
-        </div>
+          {potential && (
+            <div className="mt-3">
+              <p><strong>Development potential:</strong> {potential.development_potential}</p>
+              <p className="text-sm text-gray-600">{potential.highest_best_use}</p>
+            </div>
+          )}
+        </Card>
+
+        {summary && (
+          <Card title="Summary">
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: summary.summary }}
+            />
+          </Card>
+        )}
+
+        {score && (
+          <Card title="Development Score">
+            <p className="text-2xl font-bold">{score.score} / 100</p>
+            <p className="text-sm text-gray-600">{score.explanation}</p>
+          </Card>
+        )}
       </div>
+
+      {zoningExplanation && (
+        <Card title="Zoning Explanation">
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: zoningExplanation.zoning_explanation }}
+          />
+        </Card>
+      )}
+
+      {restrictions && (
+        <Card title="Restrictions">
+          <ul className="list-disc pl-5 space-y-1">
+            {restrictions.major_restrictions.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {recommendations && (
+        <Card title="Recommendations">
+          <ul className="list-disc pl-5 space-y-1">
+            {recommendations.recommendations.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* ✅ TRUST & CREDIBILITY */}
+      <Card title="Methodology & Disclaimer">
+        <div className="text-sm text-gray-600 space-y-2">
+          <p>
+            <strong>How estimates are calculated:</strong><br />
+            Estimated land value and development potential are derived from parcel size,
+            buildability status, zoning category, and heuristic market assumptions.
+          </p>
+
+          <p>
+            <strong>What this tool does:</strong><br />
+            Provides exploratory insights for comparison and early-stage analysis.
+          </p>
+
+          <p>
+            <strong>What this tool does NOT do:</strong><br />
+            It does not replace professional valuation, legal review, or official planning decisions.
+          </p>
+
+          <p className="italic">This is not a legal or financial document.</p>
+        </div>
+      </Card>
     </div>
   );
 }

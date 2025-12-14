@@ -5,6 +5,7 @@ import ParcelCreate from "./pages/ParcelCreate.jsx";
 import ParcelEdit from "./pages/ParcelEdit.jsx";
 import ParcelSearch from "./pages/ParcelSearch.jsx";
 import StatsDashboard from "./pages/StatsDashboard.jsx";
+import Methodology from "./pages/Methodology.jsx";
 
 export default function AppRouter() {
   return (
@@ -17,6 +18,8 @@ export default function AppRouter() {
       <Route path="/search" element={<ParcelSearch />} />
       <Route path="/stats" element={<StatsDashboard />} />
       <Route path="*" element={<div>Page not found</div>} />
+      <Route path="/methodology" element={<Methodology />} />
+
     </Routes>
   );
 }

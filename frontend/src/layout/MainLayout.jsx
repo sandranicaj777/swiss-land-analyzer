@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import SwissParcelLogo from "../assets/logo.png"; 
+import SwissParcelLogo from "../assets/logo.png";
+
 const navLinkClasses = ({ isActive }) =>
   `px-3 py-2 rounded-md text-sm font-medium ${
     isActive
@@ -9,43 +10,58 @@ const navLinkClasses = ({ isActive }) =>
 
 export default function MainLayout({ children }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      
+      {/* HEADER / NAVBAR */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           
+          {/* LOGO */}
           <div className="flex items-center gap-2">
-            <img 
-              src={SwissParcelLogo} 
-              alt="SwissParcel Logo"
-              className="h19 w-40 object-contain"
-              style={{ imageRendering: "crisp-edges" }}
-            />
+          <NavLink to="/parcels" className="flex items-center gap-3">
+  <img
+    src={SwissParcelLogo}
+    alt="SwissParcel Logo"
+ className="h-20 w-auto object-contain"
+  />
+</NavLink>
+
           </div>
 
-          <nav className="flex gap-2">
+          {/* NAV LINKS */}
+          <nav className="flex gap-2 items-center">
             <NavLink to="/parcels" className={navLinkClasses}>
               Parcels
             </NavLink>
             <NavLink to="/search" className={navLinkClasses}>
               Search
             </NavLink>
-            <NavLink to="/parcels/new" className={navLinkClasses}>
-              Create
-            </NavLink>
             <NavLink to="/stats" className={navLinkClasses}>
               Stats
+            </NavLink>
+            <NavLink to="/methodology" className={navLinkClasses}>
+              Methodology
             </NavLink>
           </nav>
         </div>
       </header>
 
+      {/* MAIN CONTENT */}
       <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          {children}
+        </div>
       </main>
 
-      <footer className="border-t bg-white mt-4">
-        <div className="max-w-6xl mx-auto px-4 py-3 text-xs text-slate-500">
-          SwissParcel - Demo frontend
+      {/* FOOTER */}
+      <footer className="border-t bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-slate-600 space-y-2">
+        
+
+
+          <div className="pt-2 text-xs text-slate-400">
+            © {new Date().getFullYear()} SwissParcel - Exploratory land intelligence platform for Switzerland Demo
+          </div>
         </div>
       </footer>
     </div>

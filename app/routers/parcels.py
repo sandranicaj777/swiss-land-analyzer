@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.models import Parcel, ParcelCreate 
 from app.database import get_db
 import app.crud as crud
+from app.models import ParcelORM
+
 
 logger = logging.getLogger("SwissLandAnalyzer.Parcels")
 
@@ -40,6 +42,35 @@ def create_parcel(
     
     logger.info(f"Parcel created successfully: ID={new_parcel.id}")
     return new_parcel
+
+@router.get("/parcels/geojson")
+def parcels_geojson(db: Session = Depends(get_db)):
+    parcels = db.query(ParcelORM).limit(5000).all()
+
+    features = []
+
+    for p in parcels:
+        if not p.geometry:
+            continue
+
+        features.append({
+            "type": "Feature",
+            "geometry": p.geometry,   
+            "properties": {
+                "id": p.id,
+                "canton": p.canton,
+                "area_m2": round(p.area_m2, 2),
+                "zoning": p.zoning,              
+                "is_buildable": p.is_buildable,  
+                "zoning": p.zoning
+            }
+        })
+
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
 
 @router.put("/parcels/{parcel_id}", response_model=Parcel)
 def update_parcel(
@@ -78,14 +109,25 @@ def list_parcels(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
 
 @router.get("/parcels/search", response_model=List[Parcel])
 def search_parcels(
-    canton: str | None = None, 
+    canton: str | None = None,
     buildable: bool | None = None,
-    db: Session = Depends(get_db) # New
+    min_area: float | None = None,
+    max_area: float | None = None,
+    zoning: str | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
 ):
-    # Use CRUD function to search parcels
-    results = crud.search_parcels(db, canton=canton, buildable=buildable)
-    logger.debug(f"Search executed: canton={canton}, buildable={buildable}. Found {len(results)} results.")
+    results = crud.search_parcels(
+        db,
+        canton=canton,
+        buildable=buildable,
+        min_area=min_area,
+        max_area=max_area,
+        zoning=zoning,
+        limit=limit,
+    )
     return results
+
 
 @router.get("/parcels/stats")
 def get_parcels_stats(db: Session = Depends(get_db)): # New
@@ -211,3 +253,4 @@ def get_restrictions(
         
     logger.debug(f"Restrictions fetched for ID={parcel_id}")
     return {"parcel_id": parcel_id, "major_restrictions": restrictions}
+

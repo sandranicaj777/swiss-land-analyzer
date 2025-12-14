@@ -12,15 +12,35 @@ def get_parcel_by_id(db: Session, parcel_id: str) -> ParcelORM | None:
     """Retrieves a single parcel by its ID."""
     return db.scalar(select(ParcelORM).where(ParcelORM.id == parcel_id))
 
-def search_parcels(db: Session, canton: str | None, buildable: bool | None) -> List[ParcelORM]:
-    """Searches parcels based on optional filters."""
-    stmt = select(ParcelORM)
+def search_parcels(
+    db: Session,
+    canton: str | None = None,
+    buildable: bool | None = None,
+    min_area: float | None = None,
+    max_area: float | None = None,
+    zoning: str | None = None,
+    limit: int = 50,
+):
+    query = db.query(ParcelORM)
+
     if canton:
-        stmt = stmt.where(func.lower(ParcelORM.canton) == canton.lower())
+        query = query.filter(ParcelORM.canton == canton)
+
     if buildable is not None:
-        stmt = stmt.where(ParcelORM.is_buildable == buildable)
-        
-    return db.scalars(stmt).all()
+        query = query.filter(ParcelORM.is_buildable == buildable)
+
+    if min_area is not None:
+        query = query.filter(ParcelORM.area_m2 >= min_area)
+
+    if max_area is not None:
+        query = query.filter(ParcelORM.area_m2 <= max_area)
+
+    if zoning:
+        query = query.filter(ParcelORM.zoning.ilike(f"%{zoning}%"))
+
+    return query.limit(limit).all()
+
+
 
 def get_parcels_stats(db: Session) -> Dict[str, Any]:
     """Calculates and returns statistics on all parcels."""
