@@ -1,9 +1,8 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../services";
 import ParcelMap from "../components/ParcelMap";
 
-/* Small reusable card wrapper */
 function Card({ title, children }) {
   return (
     <div className="bg-white rounded-xl shadow p-5 space-y-2">
@@ -59,15 +58,14 @@ export default function ParcelDetail() {
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold">Parcel {parcel.id}</h1>
 
-      {/* MAP */}
       {geojson && (
         <div className="rounded-xl overflow-hidden shadow">
           <ParcelMap geojson={geojson} height="320px" showLegend={false} />
         </div>
       )}
 
-      {/* GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         <Card title="Overview">
           <p><strong>Canton:</strong> {parcel.canton}</p>
           <p><strong>Area:</strong> {Math.round(parcel.area_m2)} m²</p>
@@ -92,14 +90,29 @@ export default function ParcelDetail() {
 
           {potential && (
             <div className="mt-3">
-              <p><strong>Development potential:</strong> {potential.development_potential}</p>
-              <p className="text-sm text-gray-600">{potential.highest_best_use}</p>
+              <p>
+                <strong>Development potential:</strong>{" "}
+                {potential.development_potential}
+              </p>
+              <p className="text-sm text-gray-600">
+                {potential.highest_best_use}
+              </p>
             </div>
           )}
+
+          <div className="mt-3 text-xs text-gray-500">
+            Estimates are illustrative ·{" "}
+            <Link
+              to="/methodology"
+              className="text-red-600 hover:underline"
+            >
+              See methodology & limitations
+            </Link>
+          </div>
         </Card>
 
         {summary && (
-          <Card title="Summary">
+          <Card title="AI Summary">
             <div
               className="prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: summary.summary }}
@@ -119,7 +132,9 @@ export default function ParcelDetail() {
         <Card title="Zoning Explanation">
           <div
             className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: zoningExplanation.zoning_explanation }}
+            dangerouslySetInnerHTML={{
+              __html: zoningExplanation.zoning_explanation,
+            }}
           />
         </Card>
       )}
@@ -143,29 +158,6 @@ export default function ParcelDetail() {
           </ul>
         </Card>
       )}
-
-      {/* ✅ TRUST & CREDIBILITY */}
-      <Card title="Methodology & Disclaimer">
-        <div className="text-sm text-gray-600 space-y-2">
-          <p>
-            <strong>How estimates are calculated:</strong><br />
-            Estimated land value and development potential are derived from parcel size,
-            buildability status, zoning category, and heuristic market assumptions.
-          </p>
-
-          <p>
-            <strong>What this tool does:</strong><br />
-            Provides exploratory insights for comparison and early-stage analysis.
-          </p>
-
-          <p>
-            <strong>What this tool does NOT do:</strong><br />
-            It does not replace professional valuation, legal review, or official planning decisions.
-          </p>
-
-          <p className="italic">This is not a legal or financial document.</p>
-        </div>
-      </Card>
     </div>
   );
 }
