@@ -1,19 +1,19 @@
-import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "sql_app.db")
+load_dotenv()  # 👈 ADD THIS LINE
 
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if os.environ.get("TESTING"):
-    engine = create_engine("sqlite:///:memory:")
-else:
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-    )
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -21,8 +21,8 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -30,7 +30,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def create_db_tables():
-    Base.metadata.create_all(bind=engine)

@@ -1,20 +1,17 @@
 import geopandas as gpd
+from sqlalchemy.exc import IntegrityError
 from app.database import SessionLocal
 from app.models import ParcelORM
 
 FILE_PATH = "app/data/fribourg_av.gpkg"
 LAYER = "lcsf"
+BATCH_SIZE = 1000
 
-print("Loading Fribourg cadastral parcels (layer=lcsf)...")
+print("Loading Fribourg cadastral parcels...")
 gdf = gpd.read_file(FILE_PATH, layer=LAYER)
 
-print("Original CRS:", gdf.crs)
-print("Total parcels:", len(gdf))
-
-gdf_meters = gdf.to_crs(epsg=2056)
-
-
-gdf_wgs84 = gdf_meters.to_crs(epsg=4326)
+gdf = gdf.to_crs(epsg=2056)
+gdf_wgs84 = gdf.to_crs(epsg=4326)
 
 NON_BUILDABLE_GENRES = {
     "autre_boisee",
@@ -25,37 +22,42 @@ NON_BUILDABLE_GENRES = {
 }
 
 db = SessionLocal()
+batch = []
 count = 0
 
-for idx, row in gdf_meters.iterrows():
+for idx, row in gdf.iterrows():
     geom_m = row.geometry
     if geom_m is None:
         continue
 
-    area_m2 = float(geom_m.area)
-
     geom_wgs = gdf_wgs84.loc[idx].geometry
-
     genre = row.get("Genre", "unknown")
-    is_buildable = genre not in NON_BUILDABLE_GENRES
-
-    parcel_id = f"FR-{row['NoOFS']}-{idx}"
 
     parcel = ParcelORM(
-        id=parcel_id,
+        id=f"FR-{row['NoOFS']}-{idx}",
         canton="FR",
-        area_m2=area_m2,
+        area_m2=float(geom_m.area),
         zoning=genre,
-        is_buildable=is_buildable,
+        is_buildable=genre not in NON_BUILDABLE_GENRES,
         geometry=geom_wgs.__geo_interface__,
         lon=geom_wgs.centroid.x,
         lat=geom_wgs.centroid.y,
     )
 
-    db.add(parcel)
-    count += 1
+    batch.append(parcel)
 
-db.commit()
+    if len(batch) >= BATCH_SIZE:
+        db.bulk_save_objects(batch)
+        db.commit()
+        batch.clear()
+        count += BATCH_SIZE
+        print(f"Inserted {count} parcels...")
+
+# final flush
+if batch:
+    db.bulk_save_objects(batch)
+    db.commit()
+    count += len(batch)
+
 db.close()
-
-print(f"Imported {count} Fribourg parcels with REAL area & zoning")
+print(f"✅ Imported {count} Fribourg parcels into Neon")

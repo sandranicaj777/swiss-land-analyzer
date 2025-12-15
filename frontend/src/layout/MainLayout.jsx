@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
-import SwissParcelLogo from "../assets/logo.png";
+import SwissParcelLogo from "../assets/logoswiss.png";
 
 const navLinkClasses = ({ isActive }) =>
-  `px-3 py-2 rounded-md text-sm font-medium ${
+  `px-3 py-2 rounded-md text-sm font-medium transition ${
     isActive
       ? "bg-red-600 text-white"
       : "text-slate-700 hover:bg-red-50 hover:text-red-700"
@@ -16,17 +16,22 @@ export default function MainLayout({ children }) {
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           
-          {/* LOGO */}
-          <div className="flex items-center gap-2">
-          <NavLink to="/parcels" className="flex items-center gap-3">
-  <img
-    src={SwissParcelLogo}
-    alt="SwissParcel Logo"
- className="h-20 w-auto object-contain"
-  />
-</NavLink>
+          {/* LOGO + TITLE */}
+          <NavLink
+            to="/parcels"
+            className="flex items-center gap-3 hover:opacity-90 transition"
+          >
+            <img
+              src={SwissParcelLogo}
+              alt="SwissParcel Logo"
+              className="h-10 w-auto object-contain"
+            />
 
-          </div>
+            <span className="text-xl font-semibold tracking-tight">
+              <span className="text-red-500">swiss</span>
+              <span className="text-slate-800">parcel</span>
+            </span>
+          </NavLink>
 
           {/* NAV LINKS */}
           <nav className="flex gap-2 items-center">
@@ -56,11 +61,8 @@ export default function MainLayout({ children }) {
       {/* FOOTER */}
       <footer className="border-t bg-white">
         <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-slate-600 space-y-2">
-        
-
-
           <div className="pt-2 text-xs text-slate-400">
-            © {new Date().getFullYear()} SwissParcel - Exploratory land intelligence platform for Switzerland Demo
+            © {new Date().getFullYear()} SwissParcel - Exploratory land intelligence platform for Switzerland (Demo)
           </div>
         </div>
       </footer>
