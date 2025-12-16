@@ -17,7 +17,7 @@ export default function ParcelList() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-4">Swiss Parcels</h1>
+      <h1 className="text-xl font-bold  mb-4">Freiburg Parcels</h1>
 
       {error && <div className="text-red-600">{error}</div>}
 

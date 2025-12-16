@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import LandingPage from "./pages/LandingPage.jsx";
 import ParcelList from "./pages/ParcelList.jsx";
 import ParcelDetail from "./pages/ParcelDetail.jsx";
 import ParcelCreate from "./pages/ParcelCreate.jsx";
@@ -10,16 +11,21 @@ import Methodology from "./pages/Methodology.jsx";
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/parcels" replace />} />
+      {/* LANDING */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* PARCELS */}
       <Route path="/parcels" element={<ParcelList />} />
       <Route path="/parcels/new" element={<ParcelCreate />} />
       <Route path="/parcels/:id" element={<ParcelDetail />} />
       <Route path="/parcels/:id/edit" element={<ParcelEdit />} />
+
+      {/* OTHER */}
       <Route path="/search" element={<ParcelSearch />} />
       <Route path="/stats" element={<StatsDashboard />} />
-      <Route path="*" element={<div>Page not found</div>} />
       <Route path="/methodology" element={<Methodology />} />
 
+      <Route path="*" element={<div>Page not found</div>} />
     </Routes>
   );
 }

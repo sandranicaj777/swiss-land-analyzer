@@ -11,14 +11,14 @@ const navLinkClasses = ({ isActive }) =>
 export default function MainLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      
+
       {/* HEADER / NAVBAR */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          
-          {/* LOGO + TITLE */}
+
+          {/* LOGO → LANDING PAGE */}
           <NavLink
-            to="/parcels"
+            to="/"
             className="flex items-center gap-3 hover:opacity-90 transition"
           >
             <img
@@ -60,9 +60,9 @@ export default function MainLayout({ children }) {
 
       {/* FOOTER */}
       <footer className="border-t bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-slate-600 space-y-2">
+        <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-slate-600">
           <div className="pt-2 text-xs text-slate-400">
-            © {new Date().getFullYear()} SwissParcel - Exploratory land intelligence platform for Switzerland (Demo)
+            © {new Date().getFullYear()} SwissParcel — Exploratory land intelligence platform for Switzerland (Demo)
           </div>
         </div>
       </footer>
