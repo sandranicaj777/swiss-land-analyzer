@@ -16,27 +16,15 @@ export default function LandingPage() {
       <style>
         {`
           @keyframes floatSoft {
-            0% {
-              transform: translateY(0px);
-            }
-            50% {
-              transform: translateY(-6px);
-            }
-            100% {
-              transform: translateY(0px);
-            }
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+            100% { transform: translateY(0px); }
           }
 
           @keyframes floatImage {
-            0% {
-              transform: translateY(0px) scale(1);
-            }
-            50% {
-              transform: translateY(-10px) scale(1.01);
-            }
-            100% {
-              transform: translateY(0px) scale(1);
-            }
+            0% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-10px) scale(1.01); }
+            100% { transform: translateY(0px) scale(1); }
           }
 
           .headline-float {
@@ -54,12 +42,12 @@ export default function LandingPage() {
 
           {/* LEFT: TEXT */}
           <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight headline-float">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight headline-float text-slate-900 dark:text-white">
               Ready to find your parcel’s{" "}
               <span className="text-red-600">true potential</span>?
             </h1>
 
-            <p className="text-slate-600 text-lg">
+            <p className="text-slate-600 dark:text-slate-300 text-lg">
               SwissParcel is an exploratory land intelligence platform that uses
               official cadastral data and AI-assisted analysis to help you
               understand zoning context, buildability, and development potential
@@ -67,7 +55,7 @@ export default function LandingPage() {
             </p>
 
             {/* VALUE POINTS */}
-            <ul className="space-y-2 text-slate-700">
+            <ul className="space-y-2 text-slate-700 dark:text-slate-300">
               <li>✓ Parcel-level valuation estimates</li>
               <li>✓ Zoning & buildability context</li>
               <li>✓ AI-assisted development insights</li>
@@ -76,13 +64,20 @@ export default function LandingPage() {
 
             {/* SELECT */}
             <div className="pt-4 space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Select canton
               </label>
+
               <select
                 value={canton}
                 onChange={(e) => setCanton(e.target.value)}
-                className="px-4 py-2 rounded-md border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="
+                  px-4 py-2 rounded-md border
+                  border-slate-300 dark:border-slate-700
+                  bg-white dark:bg-black
+                  text-slate-800 dark:text-white
+                  focus:outline-none focus:ring-2 focus:ring-red-500
+                "
               >
                 <option value="FR">Fribourg (available)</option>
                 <option disabled>Vaud (coming soon)</option>
