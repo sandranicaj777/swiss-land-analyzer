@@ -7,6 +7,9 @@ from app.models import Parcel, ParcelCreate
 from app.database import get_db
 import app.crud as crud
 from app.models import ParcelORM
+from app.ai.parcel_ai import generate_parcel_summary
+from app.ai.parcel_ai import generate_development_potential
+
 
 
 logger = logging.getLogger("SwissLandAnalyzer.Parcels")
@@ -170,12 +173,13 @@ def get_parcel_score(
 @router.get("/parcels/{parcel_id}/summary")
 def get_parcel_summary(
     parcel_id: str,
-    parcel: Parcel = Depends(get_parcel_or_404) 
+    parcel: Parcel = Depends(get_parcel_or_404)
 ):
-    logger.debug(f"Summary requested for ID={parcel_id}")
+    summary = generate_parcel_summary(parcel)
+
     return {
-        "parcel_id": parcel_id, 
-        "summary": f"This parcel is located in the canton of **{parcel.canton}** and has an area of **{parcel.area_m2} m²**. Its current zoning is **{parcel.zoning}**."
+        "parcel_id": parcel_id,
+        "summary": summary
     }
 
 @router.get("/parcels/{parcel_id}/recommendations")
@@ -226,20 +230,29 @@ def get_value_estimate(
 @router.get("/parcels/{parcel_id}/development-potential")
 def get_development_potential(
     parcel_id: str,
-    parcel: Parcel = Depends(get_parcel_or_404) 
+    parcel: Parcel = Depends(get_parcel_or_404)
 ):
     potential = "Low"
     recommendation = "No viable development due to zoning."
-    
+
     if parcel.is_buildable and parcel.area_m2 > 1000:
         potential = "High"
-        recommendation = "Suitable for multi-unit (3-4 story) residential project or small commercial space."
+        recommendation = "Suitable for multi-unit (3–4 story) residential project or small commercial space."
     elif parcel.is_buildable:
         potential = "Moderate"
         recommendation = "Suitable for a single-family home or duplex development."
-        
+
+    ai_text = generate_development_potential(parcel, potential)
+    if ai_text:
+        recommendation = ai_text
+
     logger.info(f"Development potential assessed for ID={parcel_id}: Potential={potential}")
-    return {"parcel_id": parcel_id, "development_potential": potential, "highest_best_use": recommendation}
+
+    return {
+        "parcel_id": parcel_id,
+        "development_potential": potential,
+        "highest_best_use": recommendation
+    }
 
 @router.get("/parcels/{parcel_id}/restrictions")
 def get_restrictions(
