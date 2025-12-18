@@ -5,8 +5,17 @@ import ParcelMap from "../components/ParcelMap";
 
 function Card({ title, children }) {
   return (
-    <div className="bg-white rounded-xl shadow p-5 space-y-2">
-      {title && <h2 className="text-lg font-semibold">{title}</h2>}
+    <div className="
+      rounded-xl shadow p-5 space-y-2
+      bg-white text-slate-900
+      dark:bg-black dark:text-white
+      border border-slate-200 dark:border-slate-800
+    ">
+      {title && (
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          {title}
+        </h2>
+      )}
       {children}
     </div>
   );
@@ -35,7 +44,12 @@ export default function ParcelDetail() {
     api.get(`/parcels/${id}/zoning-explanation`).then(res => setZoningExplanation(res.data));
   }, [id]);
 
-  if (!parcel) return <div className="p-6">Loading parcel…</div>;
+  if (!parcel)
+    return (
+      <div className="p-6 text-slate-700 dark:text-slate-300">
+        Loading parcel…
+      </div>
+    );
 
   const geojson = parcel.geometry
     ? {
@@ -56,7 +70,9 @@ export default function ParcelDetail() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Parcel {parcel.id}</h1>
+      <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+        Parcel {parcel.id}
+      </h1>
 
       {geojson && (
         <div className="rounded-xl overflow-hidden shadow">
@@ -84,7 +100,9 @@ export default function ParcelDetail() {
               <p className="text-2xl font-bold">
                 {Math.round(value.estimated_value_chf).toLocaleString()} CHF
               </p>
-              <p className="text-sm text-gray-600">{value.method}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {value.method}
+              </p>
             </>
           )}
 
@@ -94,18 +112,15 @@ export default function ParcelDetail() {
                 <strong>Development potential:</strong>{" "}
                 {potential.development_potential}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {potential.highest_best_use}
               </p>
             </div>
           )}
 
-          <div className="mt-3 text-xs text-gray-500">
+          <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
             Estimates are illustrative ·{" "}
-            <Link
-              to="/methodology"
-              className="text-red-600 hover:underline"
-            >
+            <Link to="/methodology" className="text-red-600 hover:underline">
               See methodology & limitations
             </Link>
           </div>
@@ -114,7 +129,10 @@ export default function ParcelDetail() {
         {summary && (
           <Card title="AI Summary">
             <div
-              className="prose prose-sm max-w-none"
+              className="
+                prose prose-sm max-w-none
+                prose-slate dark:prose-invert
+              "
               dangerouslySetInnerHTML={{ __html: summary.summary }}
             />
           </Card>
@@ -123,7 +141,9 @@ export default function ParcelDetail() {
         {score && (
           <Card title="Development Score">
             <p className="text-2xl font-bold">{score.score} / 100</p>
-            <p className="text-sm text-gray-600">{score.explanation}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {score.explanation}
+            </p>
           </Card>
         )}
       </div>
@@ -131,7 +151,7 @@ export default function ParcelDetail() {
       {zoningExplanation && (
         <Card title="Zoning Explanation">
           <div
-            className="prose prose-sm max-w-none"
+            className="prose prose-sm max-w-none prose-slate dark:prose-invert"
             dangerouslySetInnerHTML={{
               __html: zoningExplanation.zoning_explanation,
             }}
