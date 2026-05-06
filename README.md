@@ -150,8 +150,4 @@ Ollama is expected at: `http://localhost:11434`
  
 ---
  
-## Notes
- 
-- The hardcoded API key (`SUPER_ALEX`) in `parcels.py` should be moved to an environment variable before any production deployment.
-- The `/parcels/geojson` endpoint returns up to 5000 features and has no authentication — add rate limiting or auth if exposed publicly.
-- Value estimates are formula-based approximations, not real appraisals
+
